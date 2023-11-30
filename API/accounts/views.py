@@ -8,6 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from .models import CustomUser
 from .serializers import CustomUserSerializer
 from rest_framework.permissions import AllowAny
+from datetime import date
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -39,7 +40,20 @@ class CustomUserViewSet(APIView):
 @permission_classes([AllowAny])
 def signup_view(request):
     serializer = CustomUserSerializer(data=request.data)
+
     if serializer.is_valid():
+        # Vérifier l'âge
+        birthday = serializer.validated_data.get('birthday')
+        age = (date.today() - birthday).days // 365
+
+        if age < 15:
+            return Response({'error': 'L\'utilisateur doit avoir au moins 15 ans pour s\'inscrire.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Créer l'utilisateur
         serializer.save()
-        return Response({'message': 'Inscription réussie'}, status=status.HTTP_201_CREATED)
+
+        # Générer la réponse
+        response_data = {'message': 'Inscription réussie'}
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

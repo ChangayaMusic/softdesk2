@@ -11,9 +11,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 class CustomUserSerializer(serializers.ModelSerializer):
+    birthday = serializers.DateField(write_only=True)  # Ajoutez cette ligne pour le champ de date de naissance
+
     class Meta:
         model = CustomUser
-        fields = ['username', 'email', 'password']  # Ajoutez les champs appropriés
+        fields = ['username', 'email', 'password', 'birthday']  # Ajoutez les champs appropriés
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
