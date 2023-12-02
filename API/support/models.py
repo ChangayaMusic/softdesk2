@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 
 
+
+
 class Project(models.Model):
     STATUS_CHOICES = [
         ('To Do', 'To Do'),
@@ -27,9 +29,8 @@ class Contributor(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='contributors')
 
 
-def __str__(self):
-        return self.user.username
-
+    def __str__(self):
+            return self.user.username
 
 
 
@@ -71,3 +72,13 @@ class Issue(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Comment(models.Model):
+    issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    text = models.TextField()
+    created_time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.user.username} on {self.issue.title}"

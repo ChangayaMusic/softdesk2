@@ -1,6 +1,6 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Project, Contributor, Issue
+from .models import *
 
 class ContributorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,3 +16,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = '__all__'
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['id', 'issue', 'user', 'text', 'created_time']
