@@ -1,15 +1,17 @@
 # views.py
-from rest_framework import generics
+
 from .models import *
 from .serializers import *
 from .permissions import *
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import RetrieveUpdateAPIView
+from rest_framework.generics import DestroyAPIView
+from rest_framework import generics
 
-from .models import Project
-from .serializers import ProjectSerializer
 
 class ContributorListCreateView(generics.ListCreateAPIView):
     queryset = Contributor.objects.all()
@@ -35,6 +37,26 @@ class ProjectCreateView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class DeleteProjectView(APIView):
+    permission_classes = [IsAuthenticated, IsProjectAuthor]
+
+    def delete(self, request, project_id):
+        try:
+            # Récupérez le projet spécifique
+            project = Project.objects.get(id=project_id)
+
+            # Supprimez le projet
+            project.delete()
+            return Response({"message": "Project deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+        except Project.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class ProjectRetrieveUpdateView(RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated, IsProjectAuthor]
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
 
 class ProjectListView(APIView):
     def get(self, request):
@@ -67,6 +89,16 @@ class AddIssueToProjectView(APIView):
 
         except Project.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class DeleteIssueView(generics.DestroyAPIView):
+    queryset = Issue.objects.all()
+    serializer_class = IssueSerializer
+    lookup_field = 'issue_id'
+
+class UpdateIssueView(generics.UpdateAPIView):
+    queryset = Issue.objects.all()
+    serializer_class = IssueSerializer
+    lookup_url_kwarg = 'issue_id'
 
 class ProjectIssuesListView(generics.ListAPIView):
     serializer_class = IssueSerializer
@@ -103,6 +135,27 @@ class AddCommentToIssueView(APIView):
         except Issue.DoesNotExist:
             return Response({"error": "Issue not found"}, status=status.HTTP_404_NOT_FOUND)
 
+class DeleteCommentView(APIView):
+
+
+    def delete(self, request, project_id, issue_id, comment_id):
+        comment = Comment.objects.get(id=comment_id)
+        comment.delete()
+        return Response({"message": "Comment deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+class UpdateCommentView(APIView):
+    def patch(self, request, project_id, issue_id, comment_id):
+        try:
+            comment = Comment.objects.get(id=comment_id)
+
+            serializer = CommentSerializer(comment, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Comment.DoesNotExist:
+            return Response({"error": "Comment not found"}, status=status.HTTP_404_NOT_FOUND)
 class CommentListAPIView(APIView):
     def get(self, request, project_id, issue_id):
         try:
