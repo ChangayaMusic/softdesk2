@@ -59,6 +59,7 @@ class ProjectRetrieveUpdateView(RetrieveUpdateAPIView):
     serializer_class = ProjectSerializer
 
 class ProjectListView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         projects = Project.objects.all()
         serializer = ProjectSerializer(projects, many=True)
