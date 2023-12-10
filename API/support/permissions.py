@@ -1,31 +1,24 @@
-from rest_framework.permissions import BasePermission
+# permissions.py
 
-class IsCommentAuthorOrProjectContributor(BasePermission):
-    """
-    Permission pour permettre l'accès à l'auteur du commentaire ou à tous les contributeurs du projet.
-    """
-    message = "Vous n'avez pas la permission d'effectuer cette action."
+from rest_framework import permissions
 
+class IsProjectAuthor(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        # Vérifier si l'utilisateur est l'auteur du commentaire ou un contributeur du projet
-        return obj.author_user_id == request.user or obj.issue_id.project_id.contributors.filter(user=request.user).exists()
+        # Seul l'auteur du projet peut effectuer certaines actions
+        return obj.author == request.user
 
-class IsIssueAuthorOrProjectContributor(BasePermission):
-    """
-    Permission pour permettre l'accès à l'auteur de l'issue ou à tous les contributeurs du projet.
-    """
-    message = "Vous n'avez pas la permission d'effectuer cette action."
-
+class IsIssueAuthor(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        # Vérifier si l'utilisateur est l'auteur de l'issue ou un contributeur du projet
-        return obj.author_user_id == request.user or obj.project_id.contributors.filter(user=request.user).exists()
+        # Seul l'auteur de l'issue peut effectuer certaines actions
+        return obj.author == request.user
 
-class IsProjectAuthor(BasePermission):
-    """
-    Permission pour permettre l'accès uniquement à l'auteur du projet.
-    """
-    message = "Vous n'avez pas la permission d'effectuer cette action."
-
+class IsCommentAuthor(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        # Vérifier si l'utilisateur est l'auteur du projet
-        return obj.author_user_id == request.user
+        # Seul l'auteur du commentaire peut effectuer certaines actions
+        return obj.author == request.user
+
+class IsContributor(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        # Tous les contributeurs ont la permission de lecture
+        return obj.contributors.filter(user=request.user).exists()
+
