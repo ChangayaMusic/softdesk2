@@ -15,14 +15,15 @@ class Project(models.Model):
     ]
 
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
+    title = models.CharField(max_length=255)  # Add this line for the title field
     description = models.TextField()
-    project_type = models.CharField(max_length=20)  # Back-end, front-end, iOS, Android
+    project_type = models.CharField(max_length=20)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='To Do')
     created_time = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.name
+        return self.title
+
 
 class Contributor(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

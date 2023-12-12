@@ -1,31 +1,28 @@
-from rest_framework.permissions import BasePermission
+from rest_framework import permissions
+from .models import Contributor
 
-class IsCommentAuthorOrProjectContributor(BasePermission):
-    """
-    Permission pour permettre l'accès à l'auteur du commentaire ou à tous les contributeurs du projet.
-    """
-    message = "Vous n'avez pas la permission d'effectuer cette action."
-
+class IsProjectAuthor(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        # Vérifier si l'utilisateur est l'auteur du commentaire ou un contributeur du projet
-        return obj.author_user_id == request.user or obj.issue_id.project_id.contributors.filter(user=request.user).exists()
+        # Check if the user is the author of the project
+        return obj.author == request.user
 
-class IsIssueAuthorOrProjectContributor(BasePermission):
-    """
-    Permission pour permettre l'accès à l'auteur de l'issue ou à tous les contributeurs du projet.
-    """
-    message = "Vous n'avez pas la permission d'effectuer cette action."
-
+class IsIssueAuthor(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        # Vérifier si l'utilisateur est l'auteur de l'issue ou un contributeur du projet
-        return obj.author_user_id == request.user or obj.project_id.contributors.filter(user=request.user).exists()
+        # Check if the user is the author of the issue
+        return obj.issue_author == request.user
 
-class IsProjectAuthor(BasePermission):
-    """
-    Permission pour permettre l'accès uniquement à l'auteur du projet.
-    """
-    message = "Vous n'avez pas la permission d'effectuer cette action."
-
+class IsCommentAuthor(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        # Vérifier si l'utilisateur est l'auteur du projet
-        return obj.author_user_id == request.user
+        # Check if the user is the author of the comment
+        return obj.user == request.user
+class IsContributor(permissions.BasePermission):
+    def has_permission(self, request, view):
+        project_id = view.kwargs.get('project_id')
+        if project_id:
+            try:
+                # Check if the user is a contributor to the project
+                Contributor.objects.get(user=request.user, project_id=project_id)
+                return True
+            except Contributor.DoesNotExist:
+                return False
+        return False

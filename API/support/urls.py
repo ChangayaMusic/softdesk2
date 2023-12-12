@@ -12,7 +12,8 @@ urlpatterns = [
     path('projects/list/', ProjectListView.as_view(), name='project-list'),
     path('projects/<int:project_id>/add-issue/', AddIssueToProjectView.as_view(), name='add-issue-to-project'),
     path('projects/<int:project_id>/issues/', ProjectIssuesListView.as_view(), name='project-issues-list'),
-    path('projects/<int:project_id>/issues/<int:pk>/delete/', DeleteIssueView.as_view(), name='delete-issue'),
+    path('projects/<int:project_id>/issues/<int:id>/delete/', DeleteIssueView.as_view(), name='delete-issue'),
+
     path('projects/<int:project_id>/issues/<int:issue_id>/add-comment/', AddCommentToIssueView.as_view(), name='add-comment-to-issue'),
     path('projects/<int:project_id>/issues/<int:issue_id>/comments/', CommentListAPIView.as_view(), name='comment-list'),
     path('projects/<int:project_id>/issues/<int:issue_id>/update/', UpdateIssueView.as_view(), name='update-issue'),
