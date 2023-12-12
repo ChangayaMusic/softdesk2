@@ -34,6 +34,9 @@ class Contributor(models.Model):
 
 
 
+from django.db import models
+from django.contrib.auth import get_user_model
+
 class Issue(models.Model):
     LOW = 'LOW'
     MEDIUM = 'MEDIUM'
@@ -68,7 +71,13 @@ class Issue(models.Model):
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='MEDIUM')
     tag = models.CharField(max_length=10, choices=TAG_CHOICES, default='BUG')
     created_time = models.DateTimeField(auto_now_add=True)
-    contributor = models.ForeignKey(Contributor, null=True, blank=True, on_delete=models.SET_NULL)
+    issue_author = models.ForeignKey(
+        get_user_model(),
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='authored_issues'
+    )
 
     def __str__(self):
         return self.title
