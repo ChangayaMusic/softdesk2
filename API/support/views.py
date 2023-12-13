@@ -12,6 +12,17 @@ from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.generics import DestroyAPIView
 from rest_framework import generics
 
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+
+from .models import Project, Contributor
+from .serializers import ContributorSerializer
+from accounts.serializers import CustomUserSerializer
+from .permissions import IsProjectAuthor
+from accounts.models import CustomUser
+
 from .permissions import (
     IsProjectAuthor, IsIssueAuthor, IsCommentAuthor, IsContributor
 )
@@ -86,51 +97,28 @@ class ProjectListView(APIView):
         projects = Project.objects.all()
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-# views.py
 
-from .models import Project, Contributor, Issue
-from .serializers import IssueSerializer
-from .permissions import IsContributor
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
+class AddIssueToProjectView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsContributor]
+    serializer_class = IssueSerializer
 
-# views.py
-
-class AddIssueToProjectView(APIView):
-    permission_classes = [IsAuthenticated, IsContributor]
-
-    def post(self, request, project_id):
+    def get_project(self):
+        project_id = self.kwargs.get('project_id')
         try:
-            # Récupérez le projet spécifique
-            project = Project.objects.get(id=project_id)
-
-            # Obtenez l'utilisateur actuel (contributeur)
-            user = self.request.user
-
-            # Ajoutez l'issue associée au projet avec l'issue_author défini
-            request.data['project'] = project_id
-            request.data['issue_author'] = user.id  # Set the issue_author based on the user
-
-            serializer = IssueSerializer(data=request.data)
-            if serializer.is_valid():
-                # Set the project_id before saving the serializer
-                serializer.validated_data['project_id'] = project_id
-
-                # Créez l'issue associée au projet
-                issue = serializer.save()
-
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                print(f"Serializer errors: {serializer.errors}")
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+            return Project.objects.get(id=project_id)
         except Project.DoesNotExist:
-            print(f"Project {project_id} not found")
-            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+            return None
 
+    def perform_create(self, serializer):
+        project = self.get_project()
 
+        if project:
+            # Set the project and issue_author based on the current user
+            serializer.save(project=project, issue_author=self.request.user)
+        else:
+            # Handle the case where the project does not exist
+            raise serializers.ValidationError({"error": "Project not found."})
 class DeleteIssueView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated, IsIssueAuthor]
     queryset = Issue.objects.all()
@@ -147,8 +135,12 @@ class DeleteIssueView(generics.DestroyAPIView):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response({"detail": "Issue successfully deleted."}, status=status.HTTP_204_NO_CONTENT)
+
+    
 class UpdateIssueView(generics.UpdateAPIView):
+    
     permission_classes = [IsAuthenticated, IsIssueAuthor]
+    
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
     lookup_url_kwarg = 'issue_id'  # Specify the lookup field in the URL
@@ -158,13 +150,6 @@ class UpdateIssueView(generics.UpdateAPIView):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         return generics.get_object_or_404(self.get_queryset(), **filter_kwargs)
-
-class UpdateIssueView(generics.UpdateAPIView):
-    permission_classes = [IsAuthenticated, IsIssueAuthor]
-    queryset = Issue.objects.all()
-    serializer_class = IssueSerializer
-    lookup_url_kwarg = 'issue_id'  # Specify the lookup field in the URL
-
 
 class ProjectIssuesListView(generics.ListAPIView):
     
@@ -218,7 +203,7 @@ class DeleteCommentView(APIView):
 
 class UpdateCommentView(APIView):
     
-    permission_classes = [IsAuthenticated, IsCommentAuthor]  # Seul l'auteur du commentaire peut modifier
+    permission_classes = [IsAuthenticated, IsCommentAuthor] 
 
     def patch(self, request, project_id, issue_id, comment_id):
         try:
@@ -251,3 +236,44 @@ class CommentListAPIView(APIView):
 
         except Comment.DoesNotExist:
             return Response({"error": "Comments not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+class AddContributorToProjectView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, project_id):
+        try:
+            # Retrieve the specific project
+            project = Project.objects.get(id=project_id)
+
+            # Check if the user making the request is the author of the project
+            if project.author != request.user:
+                return Response({"error": "You do not have permission to add contributors to this project."}, status=status.HTTP_403_FORBIDDEN)
+
+            # Get the user ID from the request data
+            user_id = request.data.get('user_id')
+
+            # Check if the user with the given ID exists
+            try:
+                user = CustomUser.objects.get(id=user_id)
+            except CustomUser.DoesNotExist:
+                return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Check if the user is already a contributor to the project
+            if project.contributors.filter(user=user).exists():
+                return Response({"error": "User is already a contributor to this project."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create a new Contributor instance
+            contributor = Contributor.objects.create(user=user, project=project)
+
+            # Serialize the contributor data
+            serializer = ContributorSerializer(contributor)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Project.DoesNotExist:
+            return Response({"error": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+class UsersListView(generics.ListCreateAPIView):
+    
+    permission_classes = [IsAuthenticated]
+    
+    queryset = CustomUser.objects.all()
+    serializer_class = CustomUserSerializer

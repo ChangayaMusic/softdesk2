@@ -2,6 +2,7 @@
 from rest_framework import serializers
 from .models import Project, Contributor, Issue, Comment
 from django.contrib.auth.models import User
+from accounts.models import CustomUser
 
 class ContributorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,3 +33,4 @@ class ProjectSerializer(serializers.ModelSerializer):
         # Set the author field to the user making the request
         validated_data['author'] = self.context['request'].user
         return super().create(validated_data)
+    

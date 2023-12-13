@@ -7,6 +7,7 @@ from django.conf import settings
 
 
 
+
 class Project(models.Model):
     STATUS_CHOICES = [
         ('To Do', 'To Do'),
@@ -26,17 +27,13 @@ class Project(models.Model):
 
 
 class Contributor(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='contributors')
-
+    project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='contributors')
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL)
 
     def __str__(self):
-            return self.user.username
+        return f"Contributors for {self.project.title}"
 
 
-
-from django.db import models
-from django.contrib.auth import get_user_model
 
 class Issue(models.Model):
     LOW = 'LOW'
@@ -72,14 +69,12 @@ class Issue(models.Model):
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='MEDIUM')
     tag = models.CharField(max_length=10, choices=TAG_CHOICES, default='BUG')
     created_time = models.DateTimeField(auto_now_add=True)
+    
     issue_author = models.ForeignKey(
         get_user_model(),
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,  # Change this to the desired on_delete rule
         related_name='authored_issues'
     )
-
     def __str__(self):
         return self.title
 
