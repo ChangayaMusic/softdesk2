@@ -44,9 +44,6 @@ class ProjectListCreateView(generics.ListCreateAPIView):
     serializer_class = ProjectSerializer
 
 
-# views.py
-# views.py
-
 class ProjectCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -244,39 +241,32 @@ class CommentListAPIView(APIView):
             return Response({"error": "Comments not found"}, status=status.HTTP_404_NOT_FOUND)
         
 class AddContributorToProjectView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProjectAuthor]
 
-    def post(self, request, project_id):
+    def post(self, request, project_id, *args, **kwargs):
+        print("AddContributorToProjectView post method called")
         try:
-            # Retrieve the specific project
             project = Project.objects.get(id=project_id)
-
-            # Check if the user making the request is the author of the project
-            if project.author != request.user:
-                return Response({"error": "You do not have permission to add contributors to this project."}, status=status.HTTP_403_FORBIDDEN)
-
-            # Get the user ID from the request data
-            user_id = request.data.get('user_id')
-
-            # Check if the user with the given ID exists
-            try:
-                user = CustomUser.objects.get(id=user_id)
-            except CustomUser.DoesNotExist:
-                return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-
-            # Check if the user is already a contributor to the project
-            if project.contributors.filter(user=user).exists():
-                return Response({"error": "User is already a contributor to this project."}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Create a new Contributor instance
-            contributor = Contributor.objects.create(user=user, project=project)
-
-            # Serialize the contributor data
-            serializer = ContributorSerializer(contributor)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
         except Project.DoesNotExist:
-            return Response({"error": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": f"Project with id {project_id} not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        user_ids = request.data.get('user_ids', [])
+        print(f"Project ID: {project_id}, User IDs: {user_ids}")
+
+        if not user_ids:
+            return Response(
+                {"detail": "User IDs are required in the request data."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        contributor, created = Contributor.objects.get_or_create(project=project)
+        contributor.users.add(*user_ids)
+
+        serializer = ContributorSerializer(contributor)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 class UsersListView(generics.ListCreateAPIView):
     
     permission_classes = [IsAuthenticated]
