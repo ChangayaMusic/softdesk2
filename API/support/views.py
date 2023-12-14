@@ -141,9 +141,8 @@ class DeleteIssueView(generics.DestroyAPIView):
 
     
 class UpdateIssueView(generics.UpdateAPIView):
-    
     permission_classes = [IsAuthenticated, IsIssueAuthor]
-    
+
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
     lookup_url_kwarg = 'issue_id'  # Specify the lookup field in the URL
@@ -154,6 +153,10 @@ class UpdateIssueView(generics.UpdateAPIView):
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         return generics.get_object_or_404(self.get_queryset(), **filter_kwargs)
 
+    def update(self, request, *args, **kwargs):
+        # Ensure that permissions are checked when updating
+        self.check_permissions(request)
+        return super().update(request, *args, **kwargs)
 class ProjectIssuesListView(generics.ListAPIView):
     
     permission_classes = [IsAuthenticated, IsContributor]
@@ -164,36 +167,31 @@ class ProjectIssuesListView(generics.ListAPIView):
         return Issue.objects.filter(project_id=project_id)
 
 class AddCommentToIssueView(APIView):
-    
     permission_classes = [IsAuthenticated, IsContributor]
-    
-    
+
     def post(self, request, project_id, issue_id):
         try:
-            # Récupérez l'issue spécifique
+            # Retrieve the issue using the issue_id from the URL
             issue = Issue.objects.get(id=issue_id)
 
-            # Ajoutez le commentaire à l'issue
-            comment_text = request.data.get('comment', '')
+            # Add the comment to the issue
+            comment_text = request.data.get('text', '')
 
             # Create a new Comment instance
             comment = Comment.objects.create(
                 issue=issue,
-                user=request.user,
+                comment_author=request.user,
                 text=comment_text
             )
 
-            # Récupérez le contributeur associé à l'utilisateur qui crée le commentaire
-            contributor, created = Contributor.objects.get_or_create(user=request.user, project=issue.project)
-
-            # Sauvegardez le contributeur (si nécessaire)
-            contributor.save()
 
             serializer = CommentSerializer(comment)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except Issue.DoesNotExist:
             return Response({"error": "Issue not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 
 class DeleteCommentView(APIView):
 

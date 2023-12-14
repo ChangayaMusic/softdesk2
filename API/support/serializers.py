@@ -29,9 +29,13 @@ class IssueSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'status', 'priority', 'tag', 'created_time', 'issue_author']
 
 class CommentSerializer(serializers.ModelSerializer):
+    comment_author = serializers.StringRelatedField(source='comment_author.username', read_only=True)
+
     class Meta:
         model = Comment
-        fields = ['id', 'text', 'created_time']
+        fields = ['id', 'issue', 'comment_author', 'text', 'created_time']
+
+
 
 class ProjectSerializer(serializers.ModelSerializer):
     contributors = ContributorSerializer(many=True, read_only=True)

@@ -151,6 +151,17 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_SCOPE_CLAIM': 'scope',
 }
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.IsAdminUser',
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+        'support.permissions.IsAuthenticated',
+        'support.permissions.IsContributor',
+        'support.permissions.IsProjectAuthor',
+        'support.permissions.IsIssueAuthor',
+        'support.permissions.IsCommentAuthor',
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
