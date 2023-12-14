@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from accounts.models import CustomUser 
 
 
 
@@ -27,11 +28,11 @@ class Project(models.Model):
 
 
 class Contributor(models.Model):
+    users = models.ManyToManyField(CustomUser)
     project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='contributors')
-    users = models.ManyToManyField(settings.AUTH_USER_MODEL)
 
     def __str__(self):
-        return f"Contributors for {self.project.title}"
+        return ', '.join(user.username for user in self.users.all())
 
 
 
