@@ -43,24 +43,30 @@ class ProjectListCreateView(generics.ListCreateAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
 
+
+# views.py
+# views.py
+
 class ProjectCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        data = request.data
-        data['author'] = request.user.id
+        # Add the 'author' field to the request data
+        request.data['author'] = request.user.id
 
-        serializer = ProjectSerializer(data=data, context={'request': request})
+        serializer = ProjectSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             # Save the project
             project = serializer.save()
 
-            # Add the author as a contributor
-            project.contributors.create(user=request.user)
+            # Create a Contributor instance with the author
+            contributor = Contributor.objects.create(project=project)
+            
+            # Add the author to the users field
+            contributor.users.add(request.user)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class DeleteProjectView(APIView):
     permission_classes = [IsAuthenticated, IsProjectAuthor]
