@@ -3,12 +3,14 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.decorators import api_view, permission_classes
 from .models import CustomUser
 from .serializers import CustomUserSerializer
 from rest_framework.permissions import AllowAny
 from datetime import date
+from .permissions import IsUserOwner
+from rest_framework.permissions import IsAuthenticated
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -57,3 +59,13 @@ def signup_view(request):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ModifyUserView(generics.UpdateAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = CustomUserSerializer
+    permission_classes = [IsAuthenticated, IsUserOwner]
+
+class DeleteUserView(generics.DestroyAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = CustomUserSerializer
+    permission_classes = [IsAuthenticated, IsUserOwner]

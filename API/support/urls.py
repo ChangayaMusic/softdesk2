@@ -1,6 +1,7 @@
 # urls.py
 from django.urls import path
 from .views import *
+from accounts.views import ModifyUserView
 
 urlpatterns = [
     path('contributors/', ContributorListCreateView.as_view(), name='contributor-list-create'),
@@ -20,6 +21,7 @@ urlpatterns = [
     path('projects/<int:project_id>/issues/<int:issue_id>/comments/<int:comment_id>/delete/', DeleteCommentView.as_view(), name='delete-comment'),
     path('projects/<int:project_id>/issues/<int:issue_id>/comments/<int:comment_id>/update/', UpdateCommentView.as_view(), name='update-comment'),
     path('users/', UsersListView.as_view(), name='user-list'),
+    path('users/modify/<int:pk>/', ModifyUserView.as_view(), name='modify-user'),
 ]
 
 
