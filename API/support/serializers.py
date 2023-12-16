@@ -15,7 +15,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ['id', 'name', 'description', 'author', 'project_type', 'status', 'created_time', 'contributors', 'issues']
+        fields = ['id','uuid', 'name', 'description', 'author', 'project_type', 'status', 'created_time', 'contributors', 'issues']
 
     def create(self, validated_data):
         # Set the author field to the user making the request
@@ -26,14 +26,14 @@ class IssueSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Issue
-        fields = ['id', 'title', 'description', 'status', 'priority', 'tag', 'created_time', 'issue_author']
+        fields = ['id','uuid', 'title', 'description', 'status', 'priority', 'tag', 'created_time', 'issue_author']
 
 class CommentSerializer(serializers.ModelSerializer):
     comment_author = serializers.StringRelatedField(source='comment_author.username', read_only=True)
 
     class Meta:
         model = Comment
-        fields = ['id', 'issue', 'comment_author', 'text', 'created_time']
+        fields = ['id','uuid', 'issue', 'comment_author', 'text', 'created_time']
 
 
 
@@ -43,7 +43,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ['id', 'title', 'description', 'author', 'project_type', 'status', 'created_time', 'contributors', 'issues']
+        fields = ['id','uuid','title', 'description', 'author', 'project_type', 'status', 'created_time', 'contributors', 'issues']
 
     def create(self, validated_data):
         # Set the author field to the user making the request

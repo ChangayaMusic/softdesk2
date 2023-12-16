@@ -4,10 +4,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from accounts.models import CustomUser 
-
-
-
-
+from django.db import models
+import uuid
 
 class Project(models.Model):
     STATUS_CHOICES = [
@@ -15,9 +13,10 @@ class Project(models.Model):
         ('In Progress', 'In Progress'),
         ('Finished', 'Finished'),
     ]
-
+    
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    title = models.CharField(max_length=255)  # Add this line for the title field
+    title = models.CharField(max_length=255)
     description = models.TextField()
     project_type = models.CharField(max_length=20)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='To Do')
@@ -27,7 +26,10 @@ class Project(models.Model):
         return self.title
 
 
+
 class Contributor(models.Model):
+    
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     users = models.ManyToManyField(CustomUser)
     project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='contributors')
 
@@ -37,6 +39,8 @@ class Contributor(models.Model):
 
 
 class Issue(models.Model):
+    
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     LOW = 'LOW'
     MEDIUM = 'MEDIUM'
     HIGH = 'HIGH'
@@ -81,6 +85,7 @@ class Issue(models.Model):
 
 
 class Comment(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comments')
     comment_author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     text = models.TextField()

@@ -3,6 +3,7 @@
 from .models import *
 from .serializers import *
 from .permissions import *
+import uuid
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -48,8 +49,13 @@ class ProjectCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        # Generate a UUID for the project
+        project_uuid = uuid.uuid4()
+
         # Add the 'author' field to the request data
         request.data['author'] = request.user.id
+        # Replace the default 'id' field with the generated UUID
+        request.data['id'] = project_uuid
 
         serializer = ProjectSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -58,13 +64,12 @@ class ProjectCreateView(APIView):
 
             # Create a Contributor instance with the author
             contributor = Contributor.objects.create(project=project)
-            
+
             # Add the author to the users field
             contributor.users.add(request.user)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class DeleteProjectView(APIView):
     permission_classes = [IsAuthenticated, IsProjectAuthor]
 
@@ -150,7 +155,7 @@ class UpdateIssueView(generics.UpdateAPIView):
     def get_object(self):
         # Use the specified lookup field to get the object
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}  
         return generics.get_object_or_404(self.get_queryset(), **filter_kwargs)
 
     def update(self, request, *args, **kwargs):
