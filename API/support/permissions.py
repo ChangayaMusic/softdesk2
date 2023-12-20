@@ -5,13 +5,12 @@ from .models import Project
 
 class IsAuthenticated(permissions.IsAuthenticated):
     def has_permission(self, request, view):
+        print("IsAuthenticated has_object_permission called")
+
         result = super().has_permission(request, view)
         print(f"IsAuthenticated has_permission: {result}")
         return result
 
-# permissions.py
-
-# permissions.py
 
 class IsContributor(permissions.BasePermission):
     def has_permission(self, request, view):

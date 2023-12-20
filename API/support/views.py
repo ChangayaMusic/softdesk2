@@ -270,9 +270,15 @@ class AddContributorToProjectView(APIView):
 
         serializer = ContributorSerializer(contributor)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-class UsersListView(generics.ListCreateAPIView):
-    
+class UsersListView(APIView):
     permission_classes = [IsAuthenticated]
-    
-    queryset = CustomUser.objects.all()
-    serializer_class = CustomUserSerializer
+
+    def get(self, request, *args, **kwargs):
+        # Retrieve the list of users from the database
+        users = CustomUser.objects.all()
+
+        # Serialize the users data
+        serializer = CustomUserSerializer(users, many=True)
+
+        # Return the serialized data as a JSON response
+        return Response(serializer.data, status=status.HTTP_200_OK)
