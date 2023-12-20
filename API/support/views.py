@@ -1,48 +1,77 @@
-# views.py
-
-from .models import *
-from .serializers import *
-from .permissions import *
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.generics import RetrieveUpdateAPIView, DestroyAPIView, ListCreateAPIView, CreateAPIView, ListAPIView, UpdateAPIView
+from rest_framework.permissions import IsAuthenticated
+from .models import Project, Contributor, Issue, Comment
+from .serializers import ProjectSerializer, ContributorSerializer, IssueSerializer, CommentSerializer
+from .permissions import IsProjectAuthor, IsIssueAuthor, IsCommentAuthor, IsContributor
 import uuid
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import RetrieveUpdateAPIView
-from rest_framework.generics import DestroyAPIView
-from rest_framework import generics
+def paginate_objects(request, objects, items_per_page=10):
+    paginator = Paginator(objects, items_per_page)
+    page = request.GET.get('page', 1)
 
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+    try:
+        paginated_objects = paginator.page(page)
+    except PageNotAnInteger:
+        paginated_objects = paginator.page(1)
+    except EmptyPage:
+        paginated_objects = paginator.page(paginator.num_pages)
 
-from .models import Project, Contributor
-from .serializers import ContributorSerializer
-from accounts.serializers import CustomUserSerializer
-from .permissions import IsProjectAuthor
-from accounts.models import CustomUser
+    return paginated_objects
 
-from .permissions import (
-    IsProjectAuthor, IsIssueAuthor, IsCommentAuthor, IsContributor
-)
 
-class ContributorListCreateView(generics.ListCreateAPIView):
+class ContributorListCreateView(ListCreateAPIView):
     queryset = Contributor.objects.all()
     serializer_class = ContributorSerializer
+    permission_classes = [IsAuthenticated]
 
-class IssueListCreateView(generics.ListCreateAPIView):
-    
+
+class IssueListCreateView(ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsContributor]
-    
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
 
-class ProjectListCreateView(generics.ListCreateAPIView):
+    def list(self, request, *args, **kwargs):
+        issues = Issue.objects.all()
+        paginated_issues = paginate_objects(request, issues)
+        serializer = self.get_serializer(paginated_issues, many=True)
+        return Response(serializer.data)
+
+
+class ProjectListCreateView(ListCreateAPIView):
     permission_classes = [IsAuthenticated]
-    queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
+
+    def get(self, request, *args, **kwargs):
+        projects = Project.objects.all()
+        paginated_projects = paginate_objects(request, projects)
+        serializer = ProjectSerializer(paginated_projects, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        # Generate a UUID for the project
+        project_uuid = uuid.uuid4()
+
+        # Add the 'author' field to the request data
+        request.data['author'] = request.user.id
+        # Replace the default 'id' field with the generated UUID
+        request.data['id'] = project_uuid
+
+        serializer = ProjectSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            # Save the project
+            project = serializer.save()
+
+            # Create a Contributor instance with the author
+            contributor = Contributor.objects.create(project=project)
+
+            # Add the author to the users field
+            contributor.users.add(request.user)
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProjectCreateView(APIView):
@@ -70,6 +99,8 @@ class ProjectCreateView(APIView):
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class DeleteProjectView(APIView):
     permission_classes = [IsAuthenticated, IsProjectAuthor]
 
@@ -93,22 +124,23 @@ class DeleteProjectView(APIView):
 
 
 class ProjectRetrieveUpdateView(RetrieveUpdateAPIView):
-    
     permission_classes = [IsAuthenticated, IsProjectAuthor]
-    
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
 
+
 class ProjectListView(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
         projects = Project.objects.all()
-        serializer = ProjectSerializer(projects, many=True)
+        paginated_projects = paginate_objects(request, projects)
+        serializer = ProjectSerializer(paginated_projects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class AddIssueToProjectView(generics.CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsContributor]
+class AddIssueToProjectView(CreateAPIView):
+    permission_classes = [IsAuthenticated, IsContributor]
     serializer_class = IssueSerializer
 
     def get_project(self):
@@ -127,7 +159,9 @@ class AddIssueToProjectView(generics.CreateAPIView):
         else:
             # Handle the case where the project does not exist
             raise serializers.ValidationError({"error": "Project not found."})
-class DeleteIssueView(generics.DestroyAPIView):
+
+
+class DeleteIssueView(DestroyAPIView):
     permission_classes = [IsAuthenticated, IsIssueAuthor]
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
@@ -144,10 +178,9 @@ class DeleteIssueView(generics.DestroyAPIView):
         self.perform_destroy(instance)
         return Response({"detail": "Issue successfully deleted."}, status=status.HTTP_204_NO_CONTENT)
 
-    
-class UpdateIssueView(generics.UpdateAPIView):
-    permission_classes = [IsAuthenticated, IsIssueAuthor]
 
+class UpdateIssueView(UpdateAPIView):
+    permission_classes = [IsAuthenticated, IsIssueAuthor]
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
     lookup_url_kwarg = 'issue_id'  # Specify the lookup field in the URL
@@ -155,21 +188,24 @@ class UpdateIssueView(generics.UpdateAPIView):
     def get_object(self):
         # Use the specified lookup field to get the object
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}  
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         return generics.get_object_or_404(self.get_queryset(), **filter_kwargs)
 
     def update(self, request, *args, **kwargs):
         # Ensure that permissions are checked when updating
         self.check_permissions(request)
         return super().update(request, *args, **kwargs)
-class ProjectIssuesListView(generics.ListAPIView):
-    
+
+
+class ProjectIssuesListView(ListAPIView):
     permission_classes = [IsAuthenticated, IsContributor]
     serializer_class = IssueSerializer
 
     def get_queryset(self):
         project_id = self.kwargs['project_id']
-        return Issue.objects.filter(project_id=project_id)
+        issues = Issue.objects.filter(project_id=project_id)
+        return paginate_objects(self.request, issues)
+
 
 class AddCommentToIssueView(APIView):
     permission_classes = [IsAuthenticated, IsContributor]
@@ -189,7 +225,6 @@ class AddCommentToIssueView(APIView):
                 text=comment_text
             )
 
-
             serializer = CommentSerializer(comment)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -197,38 +232,33 @@ class AddCommentToIssueView(APIView):
             return Response({"error": "Issue not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
-
-class DeleteCommentView(APIView):
-
+class DeleteCommentView(DestroyAPIView):
     permission_classes = [IsAuthenticated, IsCommentAuthor]
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    lookup_url_kwarg = 'comment_id'
 
-    def delete(self, request, project_id, issue_id, comment_id):
-        comment = Comment.objects.get(id=comment_id)
-        comment.delete()
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
         return Response({"message": "Comment deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
-class UpdateCommentView(APIView):
-    
-    permission_classes = [IsAuthenticated, IsCommentAuthor] 
 
-    def patch(self, request, project_id, issue_id, comment_id):
-        try:
-            comment = Comment.objects.get(id=comment_id)
+class UpdateCommentView(UpdateAPIView):
+    permission_classes = [IsAuthenticated, IsCommentAuthor]
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    lookup_url_kwarg = 'comment_id'
 
-            # Ajoutez la vérification de la permission ici
-            self.check_object_permissions(request, comment)
+    def update(self, request, *args, **kwargs):
+        # Ensure that permissions are checked when updating
+        self.check_permissions(request)
+        return super().update(request, *args, **kwargs)
 
-            serializer = CommentSerializer(comment, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        except Comment.DoesNotExist:
-            return Response({"error": "Comment not found"}, status=status.HTTP_404_NOT_FOUND)
-class CommentListAPIView(APIView):
-    
+class CommentListAPIView(ListAPIView):
     permission_classes = [IsAuthenticated, IsContributor]
+
     def get(self, request, project_id, issue_id):
         try:
             # Assuming you have a method to get the project based on project_id
@@ -236,13 +266,15 @@ class CommentListAPIView(APIView):
 
             # Get the comments for the specified issue within the project
             comments = Comment.objects.filter(issue_id=issue_id, issue__project=project)
+            paginated_comments = paginate_objects(request, comments)
 
-            serializer = CommentSerializer(comments, many=True)
+            serializer = CommentSerializer(paginated_comments, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Comment.DoesNotExist:
             return Response({"error": "Comments not found"}, status=status.HTTP_404_NOT_FOUND)
-        
+
+
 class AddContributorToProjectView(APIView):
     permission_classes = [IsAuthenticated, IsProjectAuthor]
 
@@ -270,15 +302,14 @@ class AddContributorToProjectView(APIView):
 
         serializer = ContributorSerializer(contributor)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-class UsersListView(APIView):
+
+
+class UsersListView(ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         # Retrieve the list of users from the database
         users = CustomUser.objects.all()
-
-        # Serialize the users data
-        serializer = CustomUserSerializer(users, many=True)
-
-        # Return the serialized data as a JSON response
+        paginated_users = paginate_objects(request, users)
+        serializer = CustomUserSerializer(paginated_users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

@@ -12,6 +12,7 @@ from datetime import date
 from .permissions import IsUserOwner
 from rest_framework.permissions import IsAuthenticated
 
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
