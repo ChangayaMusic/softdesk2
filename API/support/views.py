@@ -4,13 +4,15 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.generics import RetrieveUpdateAPIView, DestroyAPIView, ListCreateAPIView, CreateAPIView, ListAPIView, UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
-from .models import Project, Contributor, Issue, Comment
+from .models import Project, Contributor, Issue, Comment, CustomUser
 from .serializers import ProjectSerializer, ContributorSerializer, IssueSerializer, CommentSerializer
+from accounts.serializers import CustomUserSerializer
 from .permissions import IsProjectAuthor, IsIssueAuthor, IsCommentAuthor, IsContributor
 import uuid
+from rest_framework import generics
 
-def paginate_objects(request, objects, items_per_page=10):
-    paginator = Paginator(objects, items_per_page)
+def paginate_objects(request, objects, items_per_page=10, ordering='id'):
+    paginator = Paginator(objects.order_by(ordering), items_per_page)
     page = request.GET.get('page', 1)
 
     try:
@@ -133,7 +135,8 @@ class ProjectListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        projects = Project.objects.all()
+        projects = Project.objects.all().order_by('id')
+
         paginated_projects = paginate_objects(request, projects)
         serializer = ProjectSerializer(paginated_projects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -171,7 +174,12 @@ class DeleteIssueView(DestroyAPIView):
         # Use the specified lookup field to get the object
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        return generics.get_object_or_404(self.get_queryset(), **filter_kwargs)
+        obj = generics.get_object_or_404(self.get_queryset(), **filter_kwargs)
+
+        # Check object-level permissions
+        self.check_object_permissions(self.request, obj)
+
+        return obj
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -189,9 +197,15 @@ class UpdateIssueView(UpdateAPIView):
         # Use the specified lookup field to get the object
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        return generics.get_object_or_404(self.get_queryset(), **filter_kwargs)
+        obj = generics.get_object_or_404(self.get_queryset(), **filter_kwargs)
+
+        # Check object-level permissions
+        self.check_object_permissions(self.request, obj)
+
+        return obj
 
     def update(self, request, *args, **kwargs):
+
         # Ensure that permissions are checked when updating
         self.check_permissions(request)
         return super().update(request, *args, **kwargs)
@@ -288,8 +302,12 @@ class AddContributorToProjectView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        user_ids = request.data.get('user_ids', [])
-        print(f"Project ID: {project_id}, User IDs: {user_ids}")
+        user_ids = request.data.get('user_id', [])
+        # Si user_ids est un entier, convertissez-le en liste
+        if isinstance(user_ids, int):
+            user_ids = [user_ids]
+
+        print(f"Project ID: {project_id}, User ID: {user_ids}")
 
         if not user_ids:
             return Response(
@@ -297,8 +315,22 @@ class AddContributorToProjectView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        contributor, created = Contributor.objects.get_or_create(project=project)
-        contributor.users.add(*user_ids)
+        # Vérification des utilisateurs existants
+        existing_users = CustomUser.objects.filter(id__in=user_ids)
+        if len(existing_users) != len(user_ids):
+            return Response(
+                {"detail": "One or more user IDs do not exist."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            contributor, created = Contributor.objects.get_or_create(project=project)
+            contributor.users.add(*user_ids)
+        except IntegrityError:
+            return Response(
+                {"detail": "IntegrityError: FOREIGN KEY constraint failed."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer = ContributorSerializer(contributor)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

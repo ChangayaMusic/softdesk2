@@ -62,11 +62,13 @@ def signup_view(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ModifyUserView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated, IsUserOwner]
     queryset = CustomUser.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = [IsAuthenticated, IsUserOwner]
 
 class DeleteUserView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated, IsUserOwner]
     queryset = CustomUser.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = [IsAuthenticated, IsUserOwner]
