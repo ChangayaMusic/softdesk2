@@ -21,8 +21,8 @@ urlpatterns = [
     path('projects/<int:project_id>/issues/<int:issue_id>/comments/<int:comment_id>/delete/', DeleteCommentView.as_view(), name='delete-comment'),
     path('projects/<int:project_id>/issues/<int:issue_id>/comments/<int:comment_id>/update/', UpdateCommentView.as_view(), name='update-comment'),
     path('userslist/', UsersListView.as_view(), name='user-list'),
-    path('users/modify/<int:pk>/', ModifyUserView.as_view(), name='modify-user'),
-    path('users/delete/<int:pk>/', DeleteUserView.as_view(), name='delete-user'),
+    path('users/modify/<uuid:uuid>/', ModifyUserView.as_view(), name='modify-user'),
+    path('users/delete/<uuid:uuid>/', DeleteUserView.as_view(), name='delete-user'),
 ]
 
 
