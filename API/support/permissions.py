@@ -1,7 +1,9 @@
 # permissions.py
 
 from rest_framework import permissions
+from rest_framework.permissions import BasePermission
 from .models import Project
+from support.models import Contributor
 
 class IsAuthenticated(permissions.IsAuthenticated):
     def has_permission(self, request, view):
@@ -12,33 +14,21 @@ class IsAuthenticated(permissions.IsAuthenticated):
         return result
 
 
-class IsContributor(permissions.BasePermission):
+class IsContributor(BasePermission):
+    """
+    Custom permission to check if the requesting user is in the list of contributors for the project.
+    """
+
     def has_permission(self, request, view):
-        print("IsContributor has_permission called")
-        if request.user and request.user.is_authenticated:
-            project_id = view.kwargs.get('project_id')
-            if project_id:
-                try:
-                    project = Project.objects.get(id=project_id)
-                    contributors = project.contributors.all()
+        project_id = view.kwargs.get('project_id') or view.kwargs.get('pk')
 
-                    # Extract contributor IDs from the list of contributors
-                    contributor_ids = [user.id for contributor in contributors for user in contributor.users.all()]
+        try:
+            # Check if the user is a contributor for the project
+            contributor = Contributor.objects.get(project_id=project_id)
 
-                    print(f"Request user ID: {request.user.id}")
-                    print(f"Contributor IDs: {contributor_ids}")
-
-                    result = request.user.id in contributor_ids
-                    print(f"IsContributor result: {result}")
-                    return result
-                except Project.DoesNotExist:
-                    print("Project not found")
-                    return False
-        return False
-
-
-
-
+            return request.user in contributor.users.all()
+        except (Contributor.DoesNotExist, Project.DoesNotExist):
+            return False
 class IsProjectAuthor(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         print("IsProjectAuthor has_object_permission called")

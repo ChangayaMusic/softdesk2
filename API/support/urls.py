@@ -1,4 +1,3 @@
-# urls.py
 from django.urls import path
 from .views import *
 from accounts.views import ModifyUserView, DeleteUserView

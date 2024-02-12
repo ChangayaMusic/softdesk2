@@ -37,10 +37,9 @@ class Contributor(models.Model):
         return ', '.join(user.username for user in self.users.all())
 
 
-
 class Issue(models.Model):
-    
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     LOW = 'LOW'
     MEDIUM = 'MEDIUM'
     HIGH = 'HIGH'
@@ -67,22 +66,22 @@ class Issue(models.Model):
         (TASK, 'Task'),
     ]
 
-    project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='issues')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='issues')
     title = models.CharField(max_length=255)
     description = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='To Do')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='MEDIUM')
     tag = models.CharField(max_length=10, choices=TAG_CHOICES, default='BUG')
     created_time = models.DateTimeField(auto_now_add=True)
-    
+
     issue_author = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,  # Change this to the desired on_delete rule
         related_name='authored_issues'
     )
+
     def __str__(self):
         return self.title
-
 
 class Comment(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False)

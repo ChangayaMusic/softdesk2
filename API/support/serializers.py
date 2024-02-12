@@ -17,7 +17,8 @@ class IssueSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Issue
-        fields = ['id','uuid', 'title', 'description', 'status', 'priority', 'tag', 'created_time', 'issue_author']
+        fields = ['id', 'title', 'description', 'status', 'priority', 'tag', 'created_time', 'issue_author']
+        read_only_fields = ['id']
 
 class CommentSerializer(serializers.ModelSerializer):
     comment_author = serializers.StringRelatedField(source='comment_author.username', read_only=True)
