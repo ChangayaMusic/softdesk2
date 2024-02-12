@@ -65,10 +65,10 @@ class ModifyUserView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated, IsUserOwner]
     queryset = CustomUser.objects.all()
     serializer_class = CustomUserSerializer
-    permission_classes = [IsAuthenticated, IsUserOwner]
+    lookup_field = 'id'  # Specify the lookup field as 'id' since you're using UUIDs
 
 class DeleteUserView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated, IsUserOwner]
     queryset = CustomUser.objects.all()
     serializer_class = CustomUserSerializer
-    permission_classes = [IsAuthenticated, IsUserOwner]
+    lookup_field = 'id'

@@ -8,6 +8,6 @@ urlpatterns = [
     path('signup/', signup_view, name='signup'),
     path('token/', CustomTokenObtainPairView.as_view(), name='token-obtain-pair'),
     path('token/refresh/', CustomTokenRefreshView.as_view(), name='token-refresh'),
-    path('modify-user/<int:id>/', ModifyUserView.as_view(), name='modify-user'),
-    path('delete/<int:id>/', DeleteUserView.as_view(), name='delete-user'),
+    path('modify-user/<uuid:id>/', ModifyUserView.as_view(), name='modify-user'),
+    path('delete/<uuid:id>/', DeleteUserView.as_view(), name='delete-user'),
 ]
