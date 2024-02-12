@@ -84,11 +84,11 @@ class Issue(models.Model):
         return self.title
 
 class Comment(models.Model):
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comments')
     comment_author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     text = models.TextField()
     created_time = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Comment by {self.user.username} on {self.issue.title}"
+        return f"Comment by {self.comment_author.username} on {self.issue.title}"

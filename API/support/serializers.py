@@ -13,19 +13,18 @@ class ContributorSerializer(serializers.ModelSerializer):
 
 
 class IssueSerializer(serializers.ModelSerializer):
-    issue_author = serializers.StringRelatedField(source='issue_author.username', read_only=True)
+    issue_author = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Issue
         fields = ['id', 'title', 'description', 'status', 'priority', 'tag', 'created_time', 'issue_author']
-        read_only_fields = ['id']
 
 class CommentSerializer(serializers.ModelSerializer):
-    comment_author = serializers.StringRelatedField(source='comment_author.username', read_only=True)
+    comment_author = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Comment
-        fields = ['id','uuid', 'issue', 'comment_author', 'text', 'created_time']
+        fields = ['id', 'issue', 'comment_author', 'text', 'created_time']
 
 
 
