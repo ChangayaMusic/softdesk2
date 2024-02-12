@@ -9,18 +9,9 @@ class ContributorSerializer(serializers.ModelSerializer):
         model = Contributor
         fields = ['id', 'users']
 
-class ProjectSerializer(serializers.ModelSerializer):
-    contributors = ContributorSerializer(many=True, read_only=True)
-    
 
-    class Meta:
-        model = Project
-        fields = ['id','uuid', 'name', 'description', 'author', 'project_type', 'status', 'created_time', 'contributors', 'issues']
 
-    def create(self, validated_data):
-        # Set the author field to the user making the request
-        validated_data['author'] = self.context['request'].user
-        return super().create(validated_data)
+
 class IssueSerializer(serializers.ModelSerializer):
     issue_author = serializers.StringRelatedField(source='issue_author.username', read_only=True)
 
@@ -39,14 +30,16 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     contributors = ContributorSerializer(many=True, read_only=True)
-    issues = IssueSerializer(many=True, read_only=True)
 
     class Meta:
         model = Project
-        fields = ['id','uuid','title', 'description', 'author', 'project_type', 'status', 'created_time', 'contributors', 'issues']
+        fields = ['id', 'author', 'title', 'description', 'project_type', 'status', 'created_time', 'contributors', 'issues']
+        read_only_fields = ['id']
 
     def create(self, validated_data):
         # Set the author field to the user making the request
         validated_data['author'] = self.context['request'].user
         return super().create(validated_data)
-    
+
+    issues = serializers.PrimaryKeyRelatedField(many=True, queryset=Issue.objects.all(), required=False)
+

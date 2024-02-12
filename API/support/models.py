@@ -7,14 +7,15 @@ from accounts.models import CustomUser
 from django.db import models
 import uuid
 
+
 class Project(models.Model):
     STATUS_CHOICES = [
         ('To Do', 'To Do'),
         ('In Progress', 'In Progress'),
         ('Finished', 'Finished'),
     ]
-    
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField()
@@ -28,10 +29,9 @@ class Project(models.Model):
 
 
 class Contributor(models.Model):
-    
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
-    users = models.ManyToManyField(CustomUser)
-    project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='contributors')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    users = models.ManyToManyField(CustomUser, blank=True, null=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='contributors')
 
     def __str__(self):
         return ', '.join(user.username for user in self.users.all())

@@ -80,13 +80,8 @@ class ProjectCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        # Generate a UUID for the project
-        project_uuid = uuid.uuid4()
-
         # Add the 'author' field to the request data
         request.data['author'] = request.user.id
-        # Replace the default 'id' field with the generated UUID
-        request.data['id'] = project_uuid
 
         serializer = ProjectSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
